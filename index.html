@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>.carv Domain - CARV Name Service</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌐</text></svg>">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 min-h-screen text-white">
+    
+    <header class="p-6 border-b border-white/10 backdrop-blur-lg bg-white/5 sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-lg flex items-center justify-center font-bold text-xl shadow-lg">C</div>
+                <div>
+                    <h1 class="text-2xl font-bold">.carv Domain</h1>
+                    <p class="text-xs text-gray-400">CARV Name Service</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-4">
+                <div id="networkBadge" class="hidden px-3 py-1 bg-yellow-500/20 text-yellow-300 rounded-full text-sm font-semibold">Testnet</div>
+                <button id="connectWallet" class="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all shadow-lg">Connect Wallet</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-6 py-12">
+        <div class="text-center mb-16">
+            <h2 class="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">Your Web3 Identity</h2>
+            <p class="text-xl md:text-2xl text-gray-300 mb-8">Claim your .carv domain for just <span class="text-purple-400 font-bold">0.02 SOL/year</span></p>
+        </div>
+
+        <div class="bg-white/5 backdrop-blur-lg rounded-2xl p-8 mb-8 border border-white/10 shadow-2xl">
+            <h3 class="text-2xl font-bold mb-6">Search Domain</h3>
+            <div class="flex flex-col md:flex-row gap-4 mb-4">
+                <div class="flex-1">
+                    <div class="relative">
+                        <input type="text" id="domainInput" placeholder="yourname" class="w-full px-6 py-4 bg-white/10 rounded-lg border border-white/20 focus:border-purple-500 focus:outline-none text-lg pr-20" maxlength="32"/>
+                        <span class="absolute right-6 top-1/2 -translate-y-1/2 text-gray-400 font-semibold text-lg">.carv</span>
+                    </div>
+                    <p class="text-sm text-gray-400 mt-2">3-32 characters • Lowercase letters, numbers, and hyphens only</p>
+                </div>
+                <button id="searchBtn" class="px-8 py-4 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold transition-all shadow-lg whitespace-nowrap">Search</button>
+            </div>
+            <div id="domainStatus" class="hidden mt-6 p-6 rounded-lg border"></div>
+            <div id="registerForm" class="hidden mt-6 space-y-4">
+                <div>
+                    <label class="block text-sm font-semibold mb-2">Metadata (Optional)</label>
+                    <textarea id="metadataInput" placeholder='{"twitter": "@handle"}' class="w-full px-4 py-3 bg-white/10 rounded-lg border border-white/20 focus:border-purple-500 focus:outline-none font-mono text-sm" rows="3"></textarea>
+                </div>
+                <button id="registerBtn" class="w-full px-6 py-4 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 rounded-lg font-bold text-lg transition-all shadow-lg">Register for 0.02 SOL/year</button>
+            </div>
+        </div>
+
+        <div class="bg-white/5 backdrop-blur-lg rounded-2xl p-8 border border-white/10 shadow-2xl">
+            <h3 class="text-2xl font-bold mb-6">My Domains</h3>
+            <div id="myDomains" class="space-y-4">
+                <div class="text-gray-400 text-center py-12"><p>Connect your wallet to see your domains</p></div>
+            </div>
+        </div>
+    </main>
+
+    <div id="loadingOverlay" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
+        <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 text-center">
+            <div class="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p class="text-xl font-semibold mb-2" id="loadingText">Processing...</p>
+            <p class="text-sm text-gray-400" id="loadingSubtext">Please wait...</p>
+        </div>
+    </div>
+
+    <div id="toast" class="hidden fixed top-6 right-6 bg-white/10 backdrop-blur-lg rounded-lg p-4 border border-white/20 z-50 min-w-[300px] shadow-2xl">
+        <div class="flex items-start gap-3">
+            <div id="toastIcon" class="w-6 h-6 flex-shrink-0"></div>
+            <div class="flex-1"><p id="toastMessage" class="text-sm"></p></div>
+            <button id="toastClose" class="text-gray-400 hover:text-white">×</button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/@solana/web3.js@1.87.6/lib/index.iife.min.js"></script>
+    
+    <script>
+        // ============================================
+        // BUFFER POLYFILL (Manual Implementation)
+        // ============================================
+        if (typeof Buffer === 'undefined') {
+            window.Buffer = {
+                from: function(data, encoding) {
+                    if (typeof data === 'string') {
+                        return new TextEncoder().encode(data);
+                    }
+                    return data;
+                },
+                alloc: function(size) {
+                    return new Uint8Array(size);
+                },
+                concat: function(arrays) {
+                    const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0);
+                    const result = new Uint8Array(totalLength);
+                    let offset = 0;
+                    for (const arr of arrays) {
+                        result.set(arr, offset);
+                        offset += arr.length;
+                    }
+                    return result;
+                }
+            };
+        }
+        
+        function debugLog(msg, data) {
+            console.log(`[CARV] ${msg}`, data || '');
+            const el = document.getElementById('debugInfo');
+            if (!el) return;
+            const time = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            div.innerHTML = `<span class="text-gray-400">[${time}]</span> ${msg}${data ? ': <span class="text-green-400">' + JSON.stringify(data) + '</span>' : ''}`;
+            el.appendChild(div);
+            el.scrollTop = el.scrollHeight;
+        }
+
+    // ============================================
+    // CONFIGURATION - UPDATED FOR CARV SVM TESTNET
+    // ============================================
+    const CONFIG = {
+        PROGRAM_ID: "8MPuR7zKVk2XQJ7apb1Ksc49oKF4AozvF5huKhwBubCa",
+        TREASURY_ADDRESS: "3KLEMtjay3MTvNvtmBq8FNkgvfmw3phPUuvggP2vPo83",
+        NETWORK: "carv-testnet",
+        RPC_ENDPOINT: "https://rpc.testnet.carv.io/rpc", // <--- CARV SVM testnet endpoint
+    };
+
+    let wallet = null;              // PublicKey instance (solanaWeb3.PublicKey)
+    let connection = null;          // solanaWeb3.Connection
+    let walletProviderName = null;  // "phantom" or "backpack" or null
+
+    // ============================================
+    // INIT (detect multiple wallets incl. Backpack)
+    // ============================================
+    async function init() {
+        try {
+            debugLog('Starting init...');
+
+            if (typeof solanaWeb3 === 'undefined') {
+                debugLog('ERROR: Solana Web3 not loaded!');
+                showToast('Please refresh the page', 'error');
+                return;
+            }
+
+            // Detect injected wallet providers
+            const providers = [];
+            if (window.solana && window.solana.isPhantom) providers.push('phantom');
+            // Backpack exposes isBackpack flag on window.solana
+            if (window.solana && window.solana.isBackpack) providers.push('backpack');
+            // Some wallets inject under window.backpack (older versions) - check as fallback
+            if (window.backpack && window.backpack.solana) providers.push('backpack');
+
+            debugLog('Wallet providers detected', { providers });
+
+            // Update UI badge for network
+            document.getElementById("networkBadge").textContent = "CARV SVM Testnet";
+            document.getElementById("networkBadge").classList.remove("hidden");
+
+            // If there's an injected solana provider and it's already connected, set wallet
+            if (window.solana && window.solana.isConnected) {
+                // choose provider name if possible
+                if (window.solana.isBackpack) walletProviderName = 'backpack';
+                else if (window.solana.isPhantom) walletProviderName = 'phantom';
+                else walletProviderName = 'injected';
+
+                // set connection with CARV RPC
+                connection = new solanaWeb3.Connection(CONFIG.RPC_ENDPOINT, "confirmed");
+                try {
+                    const resp = await window.solana.connect({ onlyIfTrusted: true });
+                    if (resp?.publicKey) {
+                        wallet = new solanaWeb3.PublicKey(resp.publicKey.toString());
+                        debugLog('Auto-connected wallet', { wallet: wallet.toString(), provider: walletProviderName });
+                        updateUI();
+                        loadMyDomains();
+                    }
+                } catch (e) {
+                    debugLog('Auto-connect skipped or failed', e?.message || e);
+                }
+            }
+
+            debugLog('Init complete!');
+        } catch (e) {
+            debugLog('ERROR init', e.message || e);
+            console.error(e);
+        }
+    }
+
+    // ============================================
+    // CONNECT WALLET (supports Phantom & Backpack)
+    // ============================================
+    async function connectWallet() {
+        try {
+            debugLog('Connecting wallet...');
+
+            if (!window.solana && !window.backpack) {
+                showToast("Install a Solana wallet (Phantom or Backpack)!", "error");
+                setTimeout(() => window.open("https://phantom.app/", "_blank"), 2000);
+                return;
+            }
+
+            // Prefer explicit Backpack if available (some users may have both)
+            if (window.solana && window.solana.isBackpack) {
+                walletProviderName = 'backpack';
+            } else if (window.solana && window.solana.isPhantom) {
+                walletProviderName = 'phantom';
+            } else if (window.backpack && window.backpack.solana) {
+                // older backpack injection
+                walletProviderName = 'backpack';
+                window.solana = window.backpack.solana;
+            } else {
+                walletProviderName = 'injected';
+            }
+
+            showLoading('Connecting...', 'Approve in wallet');
+
+            // Connect (Backpack and Phantom both support window.solana.connect())
+            const resp = await window.solana.connect();
+            // Some providers return resp.publicKey as PublicKey-like object, ensure string -> PublicKey
+            wallet = new solanaWeb3.PublicKey(resp.publicKey.toString());
+            debugLog('Wallet connected', { address: wallet.toString(), provider: walletProviderName });
+
+            // Use CARV RPC
+            connection = new solanaWeb3.Connection(CONFIG.RPC_ENDPOINT, "confirmed");
+            const version = await connection.getVersion();
+            debugLog('RPC connected', { version: version['solana-core'], endpoint: CONFIG.RPC_ENDPOINT });
+
+            updateUI();
+            hideLoading();
+            showToast("Connected! ✅", "success");
+            loadMyDomains();
+
+        } catch (e) {
+            debugLog('ERROR connect', e.message || e);
+            console.error(e);
+            hideLoading();
+            // Backpack can throw userRejected the message - handle gracefully
+            if (e?.code === 4001 || /user rejected/i.test(e?.message || '')) {
+                showToast("Connection rejected by wallet", "info");
+            } else {
+                showToast("Failed: " + (e.message || e), "error");
+            }
+        }
+    }
+
+        // ============================================
+        // DOMAIN PDA - SIMPLIFIED
+        // ============================================
+        async function getDomainPDA(name) {
+            try {
+                debugLog('Getting PDA for', { name });
+                
+                // Convert string to bytes manually
+                const domainBytes = new TextEncoder().encode("domain");
+                const nameBytes = new TextEncoder().encode(name);
+                
+                debugLog('Bytes created', {
+                    domainLen: domainBytes.length,
+                    nameLen: nameBytes.length
+                });
+                
+                const programId = new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID);
+                
+                const [pda, bump] = await solanaWeb3.PublicKey.findProgramAddressSync(
+                    [domainBytes, nameBytes],
+                    programId
+                );
+                
+                debugLog('PDA found', { 
+                    address: pda.toString(),
+                    bump: bump 
+                });
+                
+                return pda;
+            } catch (e) {
+                debugLog('ERROR getting PDA', e.message);
+                throw e;
+            }
+        }
+
+        // ============================================
+        // SEARCH
+        // ============================================
+        async function searchDomain() {
+            try {
+                debugLog('Search started');
+                
+                const input = document.getElementById("domainInput").value.toLowerCase().trim();
+                
+                if (!input) {
+                    showToast("Enter domain name", "error");
+                    return;
+                }
+                if (input.length < 3 || input.length > 32) {
+                    showToast("3-32 characters", "error");
+                    return;
+                }
+                if (!/^[a-z0-9-]+$/.test(input)) {
+                    showToast("Letters, numbers, hyphens only", "error");
+                    return;
+                }
+                
+                debugLog('Searching domain', { name: input });
+
+                if (!connection) {
+                    showToast("Connect wallet first", "error");
+                    return;
+                }
+
+                showLoading("Searching...");
+
+                const pda = await getDomainPDA(input);
+                debugLog('Checking account', { pda: pda.toString() });
+                
+                const accountInfo = await connection.getAccountInfo(pda);
+                debugLog('Account result', { 
+                    exists: !!accountInfo,
+                    dataLength: accountInfo?.data?.length 
+                });
+
+                const statusDiv = document.getElementById("domainStatus");
+                const registerForm = document.getElementById("registerForm");
+
+                if (accountInfo) {
+                    statusDiv.className = "mt-6 p-6 rounded-lg border border-red-500 bg-red-500/10";
+                    statusDiv.innerHTML = `<div class="flex items-center gap-3"><svg class="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293z" clip-rule="evenodd"/></svg><span class="font-bold text-lg">${input}.carv is taken ❌</span></div>`;
+                    statusDiv.classList.remove("hidden");
+                    registerForm.classList.add("hidden");
+                    debugLog('Domain taken');
+                } else {
+                    statusDiv.className = "mt-6 p-6 rounded-lg border border-green-500 bg-green-500/10";
+                    statusDiv.innerHTML = `<div class="flex items-center gap-3"><svg class="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg><span class="font-bold text-lg">${input}.carv is available! 🎉</span></div>`;
+                    statusDiv.classList.remove("hidden");
+                    debugLog('Domain available!');
+                    
+                    if (wallet) {
+                        registerForm.classList.remove("hidden");
+                    } else {
+                        showToast("Connect wallet to register", "info");
+                    }
+                }
+                
+                hideLoading();
+                
+            } catch (e) {
+                debugLog('ERROR search', e.message);
+                console.error('Full error:', e);
+                hideLoading();
+                showToast("Error: " + e.message, "error");
+            }
+        }
+
+        // ============================================
+        // REGISTER (Fixed - Proper Anchor Format)
+        // ============================================
+        async function registerDomain() {
+            try {
+                const name = document.getElementById("domainInput").value.toLowerCase().trim();
+
+                if (!wallet) {
+                    showToast("Connect wallet", "error");
+                    return;
+                }
+                
+                debugLog('Registering', { name });
+                showLoading("Building transaction...", "This may take a moment");
+
+                const pda = await getDomainPDA(name);
+                const treasury = new solanaWeb3.PublicKey(CONFIG.TREASURY_ADDRESS);
+                const programId = new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID);
+                
+                debugLog('Accounts', {
+                    domain: pda.toString(),
+                    owner: wallet.toString(),
+                    treasury: treasury.toString(),
+                    program: programId.toString()
+                });
+                
+                // Build instruction data for Anchor "register" function
+                // Format: [discriminator(8 bytes)] + [name as string - length prefix + data]
+                
+                // 1. Discriminator (first 8 bytes of sha256("global:register"))
+                const discriminator = new Uint8Array([211, 124, 67, 15, 211, 194, 178, 240]);
+                
+                // 2. String format in Anchor: 4-byte length (little-endian) + UTF-8 bytes
+                const nameBytes = new TextEncoder().encode(name);
+                const nameLengthBytes = new Uint8Array(4);
+                new DataView(nameLengthBytes.buffer).setUint32(0, nameBytes.length, true);
+                
+                // 3. Concatenate all parts
+                const instructionData = new Uint8Array(
+                    discriminator.length + 
+                    nameLengthBytes.length + 
+                    nameBytes.length
+                );
+                
+                let offset = 0;
+                instructionData.set(discriminator, offset);
+                offset += discriminator.length;
+                instructionData.set(nameLengthBytes, offset);
+                offset += nameLengthBytes.length;
+                instructionData.set(nameBytes, offset);
+                
+                debugLog('Instruction data built', { 
+                    totalBytes: instructionData.length,
+                    discriminator: Array.from(discriminator),
+                    nameLength: nameBytes.length,
+                    nameLengthPrefix: Array.from(nameLengthBytes),
+                    nameUtf8: Array.from(nameBytes).slice(0, 10) // First 10 bytes
+                });
+                
+                // Create the instruction
+                const instruction = new solanaWeb3.TransactionInstruction({
+                    keys: [
+                        { pubkey: pda, isSigner: false, isWritable: true },
+                        { pubkey: wallet, isSigner: true, isWritable: true },
+                        { pubkey: treasury, isSigner: false, isWritable: true },
+                        { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
+                    ],
+                    programId: programId,
+                    data: instructionData,
+                });
+                
+                debugLog('Instruction created', {
+                    numKeys: instruction.keys.length,
+                    programId: instruction.programId.toString()
+                });
+                
+                // Build and send transaction
+                const transaction = new solanaWeb3.Transaction().add(instruction);
+                transaction.feePayer = wallet;
+                
+                debugLog('Getting recent blockhash...');
+                const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('finalized');
+                transaction.recentBlockhash = blockhash;
+                
+                debugLog('Blockhash obtained', { blockhash });
+                
+                // Simulate first to catch errors early
+                debugLog('Simulating transaction...');
+                showLoading("Simulating transaction...", "Checking for errors");
+                
+                try {
+                    const simulation = await connection.simulateTransaction(transaction);
+                    debugLog('Simulation result', {
+                        err: simulation.value.err,
+                        logs: simulation.value.logs?.slice(0, 5) // First 5 logs
+                    });
+                    
+                    if (simulation.value.err) {
+                        throw new Error('Simulation failed: ' + JSON.stringify(simulation.value.err));
+                    }
+                } catch (simError) {
+                    debugLog('Simulation error', simError.message);
+                    throw new Error('Transaction will fail: ' + simError.message);
+                }
+                
+                debugLog('Simulation passed! Requesting signature...');
+                showLoading("Waiting for approval...", "Approve in Phantom");
+                
+                const signed = await window.solana.signTransaction(transaction);
+                debugLog('Transaction signed');
+                
+                debugLog('Sending transaction...');
+                showLoading("Sending transaction...", "Please wait");
+                
+                const signature = await connection.sendRawTransaction(signed.serialize(), {
+                    skipPreflight: false,
+                    preflightCommitment: 'confirmed',
+                    maxRetries: 3
+                });
+                
+                debugLog('Transaction sent!', { signature });
+                debugLog('Explorer link', { 
+                    url: `https://explorer.solana.com/tx/${signature}?cluster=${CONFIG.NETWORK}`
+                });
+                
+                showLoading("Confirming transaction...", "This may take 10-30 seconds");
+                
+                // Wait for confirmation
+                const confirmation = await connection.confirmTransaction({
+                    signature: signature,
+                    blockhash: blockhash,
+                    lastValidBlockHeight: lastValidBlockHeight
+                }, 'confirmed');
+                
+                if (confirmation.value.err) {
+                    debugLog('Confirmation error', confirmation.value.err);
+                    throw new Error('Transaction failed: ' + JSON.stringify(confirmation.value.err));
+                }
+                
+                debugLog('Transaction CONFIRMED! ✅');
+                hideLoading();
+                showToast(`${name}.carv registered successfully! 🎉`, "success");
+                
+                // Show explorer link after 2 seconds
+                setTimeout(() => {
+                    const explorerUrl = `https://explorer.solana.com/tx/${signature}?cluster=${CONFIG.NETWORK}`;
+                    showToast(`<a href="${explorerUrl}" target="_blank" class="underline">View on Explorer →</a>`, "success");
+                }, 2000);
+                
+                // Clear form
+                document.getElementById("domainInput").value = "";
+                document.getElementById("domainStatus").classList.add("hidden");
+                document.getElementById("registerForm").classList.add("hidden");
+                
+                // Reload domains after 3 seconds
+                setTimeout(() => loadMyDomains(), 3000);
+                
+            } catch (e) {
+                debugLog('ERROR register', e.message);
+                console.error('Full registration error:', e);
+                hideLoading();
+                
+                // Parse error messages
+                let errorMsg = e.message;
+                
+                if (errorMsg.includes('0x0')) {
+                    errorMsg = 'Program error. Check that Program ID and Treasury are correct.';
+                } else if (errorMsg.includes('0x1')) {
+                    errorMsg = 'Insufficient funds. You need at least 0.05 SOL.';
+                } else if (errorMsg.includes('0x65')) {
+                    errorMsg = 'Account validation failed. The domain may already exist or there\'s a configuration issue.';
+                } else if (errorMsg.includes('Simulation failed')) {
+                    errorMsg = 'Transaction simulation failed. Check console for details.';
+                }
+                
+                showToast("Registration failed: " + errorMsg, "error");
+            }
+        }
+
+        // ============================================
+        // LOAD DOMAINS (Enhanced with Actions)
+        // ============================================
+        async function loadMyDomains() {
+            if (!wallet || !connection) {
+                debugLog('Cannot load domains - no wallet/connection');
+                return;
+            }
+
+            const container = document.getElementById("myDomains");
+            container.innerHTML = '<div class="text-center py-4"><div class="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto"></div></div>';
+            
+            debugLog('Loading domains...');
+
+            try {
+                const programId = new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID);
+                
+                const accounts = await connection.getProgramAccounts(programId, {
+                    filters: [
+                        {
+                            memcmp: {
+                                offset: 8,
+                                bytes: wallet.toBase58(),
+                            }
+                        }
+                    ]
+                });
+                
+                debugLog('Domains loaded', { count: accounts.length });
+
+                if (accounts.length === 0) {
+                    container.innerHTML = '<div class="text-gray-400 text-center py-12"><p>No domains yet. Register your first one! 🚀</p></div>';
+                    return;
+                }
+
+                // Parse domain data
+                const domains = accounts.map(account => {
+                    const data = account.account.data;
+                    
+                    // Try to parse domain data
+                    try {
+                        // Skip discriminator (8 bytes) + owner (32 bytes) = 40
+                        let offset = 40;
+                        
+                        // Read name (4-byte length prefix + string)
+                        const nameLen = new DataView(data.buffer, data.byteOffset + offset, 4).getUint32(0, true);
+                        offset += 4;
+                        const nameBytes = data.slice(offset, offset + nameLen);
+                        const name = new TextDecoder().decode(nameBytes);
+                        offset += nameLen;
+                        
+                        // Read timestamps (i64 = 8 bytes each)
+                        const registered = Number(new DataView(data.buffer, data.byteOffset + offset, 8).getBigInt64(0, true));
+                        offset += 8;
+                        const expires = Number(new DataView(data.buffer, data.byteOffset + offset, 8).getBigInt64(0, true));
+                        offset += 8;
+                        
+                        // Read active (bool = 1 byte)
+                        const active = data[offset] !== 0;
+                        offset += 1;
+                        
+                        // Read metadata (4-byte length + string)
+                        const dataLen = new DataView(data.buffer, data.byteOffset + offset, 4).getUint32(0, true);
+                        offset += 4;
+                        const dataBytes = data.slice(offset, offset + dataLen);
+                        const metadata = new TextDecoder().decode(dataBytes);
+                        
+                        return {
+                            address: account.pubkey.toString(),
+                            name,
+                            registered,
+                            expires,
+                            active,
+                            metadata
+                        };
+                    } catch (e) {
+                        debugLog('Error parsing domain', e.message);
+                        return {
+                            address: account.pubkey.toString(),
+                            name: 'Unknown',
+                            registered: 0,
+                            expires: 0,
+                            active: false,
+                            metadata: ''
+                        };
+                    }
+                });
+
+                const now = Math.floor(Date.now() / 1000);
+                
+                container.innerHTML = domains.map(domain => {
+                    const daysLeft = Math.floor((domain.expires - now) / 86400);
+                    const expired = daysLeft < 0;
+                    const expiringSoon = daysLeft > 0 && daysLeft < 30;
+                    
+                    return `
+                        <div class="bg-white/5 rounded-lg p-6 border border-white/10 hover:border-white/20 transition-all">
+                            <div class="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-4">
+                                <div class="flex-1">
+                                    <h4 class="text-2xl font-bold mb-1">${domain.name}.carv</h4>
+                                    <p class="text-sm text-gray-400">Registered: ${new Date(domain.registered * 1000).toLocaleDateString()}</p>
+                                    <p class="text-sm text-gray-400">Expires: ${new Date(domain.expires * 1000).toLocaleDateString()}</p>
+                                </div>
+                                <span class="px-3 py-1 rounded-full text-sm font-semibold self-start ${
+                                    expired ? 'bg-red-500/20 text-red-300' : 
+                                    expiringSoon ? 'bg-yellow-500/20 text-yellow-300' : 
+                                    'bg-green-500/20 text-green-300'
+                                }">
+                                    ${expired ? '⚠️ Expired' : expiringSoon ? `⏰ ${daysLeft} days left` : `✅ ${daysLeft} days left`}
+                                </span>
+                            </div>
+                            
+                            ${domain.metadata ? `
+                                <div class="mb-4 p-3 bg-white/5 rounded">
+                                    <p class="text-xs text-gray-400 mb-1 font-semibold">Metadata:</p>
+                                    <pre class="font-mono text-xs text-gray-300 overflow-x-auto whitespace-pre-wrap">${domain.metadata}</pre>
+                                </div>
+                            ` : ''}
+                            
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="renewDomain('${domain.name}')" class="flex-1 min-w-[120px] px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-semibold transition-all flex items-center justify-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                    </svg>
+                                    Renew (0.02 SOL)
+                                </button>
+                                <button onclick="showTransferModal('${domain.name}')" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold transition-all flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                                    </svg>
+                                    Transfer
+                                </button>
+                                <button onclick="showUpdateModal('${domain.name}', ${domain.metadata ? `\`${domain.metadata.replace(/`/g, '\\`')}\`` : '""'})" class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm font-semibold transition-all flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                    </svg>
+                                    Update
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            } catch (e) {
+                debugLog('ERROR loading domains', e.message);
+                console.error(e);
+                container.innerHTML = '<p class="text-red-400 text-center py-8">Error loading domains</p>';
+            }
+        }
+
+        // ============================================
+        // RENEW DOMAIN
+        // ============================================
+        async function renewDomain(name) {
+            try {
+                debugLog('Renew clicked', { name });
+                
+                if (!confirm(`Renew ${name}.carv for 0.02 SOL (1 year)?`)) {
+                    return;
+                }
+                
+                showLoading("Renewing domain...", "Please approve in Phantom");
+
+                const pda = await getDomainPDA(name);
+                const treasury = new solanaWeb3.PublicKey(CONFIG.TREASURY_ADDRESS);
+                const programId = new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID);
+                
+                // Get discriminator from generator tool - UPDATE THIS!
+                // For now using placeholder - replace with correct one from generator
+                const discriminator = new Uint8Array([43, 239, 15, 46, 27, 7, 163, 73]); // REPLACE THIS
+                
+                const instruction = new solanaWeb3.TransactionInstruction({
+                    keys: [
+                        { pubkey: pda, isSigner: false, isWritable: true },
+                        { pubkey: wallet, isSigner: true, isWritable: true },
+                        { pubkey: treasury, isSigner: false, isWritable: true },
+                        { pubkey: solanaWeb3.SystemProgram.programId, isSigner: false, isWritable: false },
+                    ],
+                    programId: programId,
+                    data: discriminator, // renew has no args, just discriminator
+                });
+                
+                const transaction = new solanaWeb3.Transaction().add(instruction);
+                transaction.feePayer = wallet;
+                
+                const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('finalized');
+                transaction.recentBlockhash = blockhash;
+                
+                const signed = await window.solana.signTransaction(transaction);
+                const signature = await connection.sendRawTransaction(signed.serialize(), {
+                    skipPreflight: false,
+                    preflightCommitment: 'confirmed'
+                });
+                
+                debugLog('Renew tx sent', { signature });
+                
+                showLoading("Confirming...", "Please wait");
+                const confirmation = await connection.confirmTransaction({
+                    signature,
+                    blockhash,
+                    lastValidBlockHeight
+                }, 'confirmed');
+                
+                if (confirmation.value.err) {
+                    throw new Error('Transaction failed');
+                }
+                
+                debugLog('Renew confirmed!');
+                hideLoading();
+                showToast(`${name}.carv renewed successfully! ✨`, "success");
+                
+                setTimeout(() => loadMyDomains(), 2000);
+                
+            } catch (e) {
+                debugLog('ERROR renew', e.message);
+                console.error(e);
+                hideLoading();
+                showToast("Renew failed: " + e.message, "error");
+            }
+        }
+
+        // ============================================
+        // TRANSFER DOMAIN
+        // ============================================
+        function showTransferModal(name) {
+            const modal = document.createElement('div');
+            modal.id = 'transferModal';
+            modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 max-w-md w-full mx-4">
+                    <h3 class="text-2xl font-bold mb-4">Transfer ${name}.carv</h3>
+                    <p class="text-gray-300 mb-6">Enter the recipient's Solana address:</p>
+                    <input 
+                        type="text" 
+                        id="transferAddress" 
+                        placeholder="Recipient wallet address"
+                        class="w-full px-4 py-3 bg-white/10 rounded-lg border border-white/20 focus:border-purple-500 focus:outline-none mb-4"
+                    />
+                    <div class="flex gap-3">
+                        <button onclick="closeTransferModal()" class="flex-1 px-4 py-3 bg-white/10 hover:bg-white/20 rounded-lg font-semibold transition-all">
+                            Cancel
+                        </button>
+                        <button onclick="transferDomain('${name}')" class="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 rounded-lg font-semibold transition-all">
+                            Transfer
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function closeTransferModal() {
+            const modal = document.getElementById('transferModal');
+            if (modal) modal.remove();
+        }
+
+        async function transferDomain(name) {
+            try {
+                const addressInput = document.getElementById('transferAddress').value.trim();
+                
+                if (!addressInput) {
+                    showToast("Enter recipient address", "error");
+                    return;
+                }
+                
+                debugLog('Transfer clicked', { name, to: addressInput });
+                
+                closeTransferModal();
+                showLoading("Transferring domain...", "Please approve in Phantom");
+
+                const pda = await getDomainPDA(name);
+                const newOwner = new solanaWeb3.PublicKey(addressInput);
+                const programId = new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID);
+                
+                // Get discriminator from generator tool - UPDATE THIS!
+                const discriminator = new Uint8Array([163, 52, 200, 231, 140, 3, 69, 186]); // REPLACE THIS
+                
+                // Add newOwner pubkey (32 bytes)
+                const data = new Uint8Array(discriminator.length + 32);
+                data.set(discriminator, 0);
+                data.set(newOwner.toBytes(), discriminator.length);
+                
+                const instruction = new solanaWeb3.TransactionInstruction({
+                    keys: [
+                        { pubkey: pda, isSigner: false, isWritable: true },
+                        { pubkey: wallet, isSigner: true, isWritable: false },
+                    ],
+                    programId: programId,
+                    data: data,
+                });
+                
+                const transaction = new solanaWeb3.Transaction().add(instruction);
+                transaction.feePayer = wallet;
+                
+                const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('finalized');
+                transaction.recentBlockhash = blockhash;
+                
+                const signed = await window.solana.signTransaction(transaction);
+                const signature = await connection.sendRawTransaction(signed.serialize(), {
+                    skipPreflight: false,
+                    preflightCommitment: 'confirmed'
+                });
+                
+                debugLog('Transfer tx sent', { signature });
+                
+                showLoading("Confirming...", "Please wait");
+                const confirmation = await connection.confirmTransaction({
+                    signature,
+                    blockhash,
+                    lastValidBlockHeight
+                }, 'confirmed');
+                
+                if (confirmation.value.err) {
+                    throw new Error('Transaction failed');
+                }
+                
+                debugLog('Transfer confirmed!');
+                hideLoading();
+                showToast(`${name}.carv transferred successfully! 🎉`, "success");
+                
+                setTimeout(() => loadMyDomains(), 2000);
+                
+            } catch (e) {
+                debugLog('ERROR transfer', e.message);
+                console.error(e);
+                hideLoading();
+                showToast("Transfer failed: " + e.message, "error");
+            }
+        }
+
+        // ============================================
+        // UPDATE METADATA
+        // ============================================
+        function showUpdateModal(name, currentMetadata) {
+            const modal = document.createElement('div');
+            modal.id = 'updateModal';
+            modal.className = 'fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20 max-w-md w-full mx-4">
+                    <h3 class="text-2xl font-bold mb-4">Update ${name}.carv</h3>
+                    <p class="text-gray-300 mb-4">Update domain metadata:</p>
+                    <textarea 
+                        id="updateMetadata" 
+                        placeholder='{"twitter": "@handle", "website": "https://example.com"}'
+                        class="w-full px-4 py-3 bg-white/10 rounded-lg border border-white/20 focus:border-purple-500 focus:outline-none mb-4 font-mono text-sm"
+                        rows="5"
+                    >${currentMetadata}</textarea>
+                    <p class="text-xs text-gray-400 mb-4">Max 128 characters</p>
+                    <div class="flex gap-3">
+                        <button onclick="closeUpdateModal()" class="flex-1 px-4 py-3 bg-white/10 hover:bg-white/20 rounded-lg font-semibold transition-all">
+                            Cancel
+                        </button>
+                        <button onclick="updateMetadata('${name}')" class="flex-1 px-4 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-all">
+                            Update
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function closeUpdateModal() {
+            const modal = document.getElementById('updateModal');
+            if (modal) modal.remove();
+        }
+
+        async function updateMetadata(name) {
+            try {
+                const metadataInput = document.getElementById('updateMetadata').value.trim();
+                
+                if (metadataInput.length > 128) {
+                    showToast("Metadata too long (max 128 chars)", "error");
+                    return;
+                }
+                
+                debugLog('Update metadata', { name, metadata: metadataInput });
+                
+                closeUpdateModal();
+                showLoading("Updating metadata...", "Please approve in Phantom");
+
+                const pda = await getDomainPDA(name);
+                const programId = new solanaWeb3.PublicKey(CONFIG.PROGRAM_ID);
+                
+                // Get discriminator from generator tool - UPDATE THIS!
+                const discriminator = new Uint8Array([223, 114, 91, 136, 197, 78, 153, 153]); // REPLACE THIS
+                
+                // Encode metadata as string (4-byte length + UTF-8 bytes)
+                const metadataBytes = new TextEncoder().encode(metadataInput);
+                const lengthBytes = new Uint8Array(4);
+                new DataView(lengthBytes.buffer).setUint32(0, metadataBytes.length, true);
+                
+                const data = new Uint8Array(discriminator.length + lengthBytes.length + metadataBytes.length);
+                let offset = 0;
+                data.set(discriminator, offset);
+                offset += discriminator.length;
+                data.set(lengthBytes, offset);
+                offset += lengthBytes.length;
+                data.set(metadataBytes, offset);
+                
+                const instruction = new solanaWeb3.TransactionInstruction({
+                    keys: [
+                        { pubkey: pda, isSigner: false, isWritable: true },
+                        { pubkey: wallet, isSigner: true, isWritable: false },
+                    ],
+                    programId: programId,
+                    data: data,
+                });
+                
+                const transaction = new solanaWeb3.Transaction().add(instruction);
+                transaction.feePayer = wallet;
+                
+                const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('finalized');
+                transaction.recentBlockhash = blockhash;
+                
+                const signed = await window.solana.signTransaction(transaction);
+                const signature = await connection.sendRawTransaction(signed.serialize(), {
+                    skipPreflight: false,
+                    preflightCommitment: 'confirmed'
+                });
+                
+                debugLog('Update tx sent', { signature });
+                
+                showLoading("Confirming...", "Please wait");
+                const confirmation = await connection.confirmTransaction({
+                    signature,
+                    blockhash,
+                    lastValidBlockHeight
+                }, 'confirmed');
+                
+                if (confirmation.value.err) {
+                    throw new Error('Transaction failed');
+                }
+                
+                debugLog('Update confirmed!');
+                hideLoading();
+                showToast(`${name}.carv updated successfully! ✨`, "success");
+                
+                setTimeout(() => loadMyDomains(), 2000);
+                
+            } catch (e) {
+                debugLog('ERROR update', e.message);
+                console.error(e);
+                hideLoading();
+                showToast("Update failed: " + e.message, "error");
+            }
+        }
+
+        // ============================================
+        // UI
+        // ============================================
+        function updateUI() {
+            const btn = document.getElementById("connectWallet");
+            if (wallet) {
+                btn.innerHTML = `<div class="flex items-center gap-2"><div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>${wallet.toString().slice(0, 4)}...${wallet.toString().slice(-4)}</div>`;
+                btn.classList.add("bg-green-600");
+                btn.classList.remove("bg-purple-600");
+            }
+        }
+
+        function showLoading(text, sub = "") {
+            document.getElementById("loadingText").textContent = text;
+            document.getElementById("loadingSubtext").textContent = sub;
+            document.getElementById("loadingOverlay").classList.remove("hidden");
+        }
+
+        function hideLoading() {
+            document.getElementById("loadingOverlay").classList.add("hidden");
+        }
+
+        function showToast(msg, type = "info") {
+            const toast = document.getElementById("toast");
+            const icon = document.getElementById("toastIcon");
+            const message = document.getElementById("toastMessage");
+
+            const icons = {
+                success: '<svg class="w-6 h-6 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>',
+                error: '<svg class="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293z" clip-rule="evenodd"/></svg>',
+                info: '<svg class="w-6 h-6 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>'
+            };
+
+            icon.innerHTML = icons[type] || icons.info;
+            message.textContent = msg;
+            toast.classList.remove("hidden");
+            setTimeout(() => toast.classList.add("hidden"), 5000);
+        }
+
+        // ============================================
+        // EVENTS
+        // ============================================
+        document.getElementById("connectWallet").onclick = connectWallet;
+        document.getElementById("searchBtn").onclick = searchDomain;
+        document.getElementById("registerBtn").onclick = registerDomain;
+        document.getElementById("toastClose").onclick = () => document.getElementById("toast").classList.add("hidden");
+        
+        document.getElementById("domainInput").onkeypress = (e) => {
+            if (e.key === "Enter") searchDomain();
+        };
+        document.getElementById("domainInput").oninput = (e) => {
+            e.target.value = e.target.value.toLowerCase();
+        };
+
+        // ============================================
+        // INIT
+        // ============================================
+        window.addEventListener("load", () => {
+            debugLog('Page loaded, waiting for scripts...');
+            setTimeout(() => {
+                debugLog('Starting initialization...');
+                init();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
