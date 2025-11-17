@@ -1,0 +1,40 @@
+{
+  "placeholderImages": [
+    {
+      "id": "nft-1",
+      "description": "Abstract colorful geometric pattern NFT.",
+      "imageUrl": "https://images.unsplash.com/photo-1709626011485-6fe000ea2dbc?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxhYnN0cmFjdCUyMGdlb21ldHJpY3xlbnwwfHx8fDE3NjMyMDIyNTh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "abstract geometric"
+    },
+    {
+      "id": "nft-2",
+      "description": "Pixel art character NFT.",
+      "imageUrl": "https://images.unsplash.com/photo-1634320714682-ae8b9c9cee60?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxwaXhlbCUyMGFydHxlbnwwfHx8fDE3NjMxNTUyNzN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "pixel art"
+    },
+    {
+      "id": "nft-3",
+      "description": "Futuristic landscape NFT.",
+      "imageUrl": "https://images.unsplash.com/photo-1713417338581-d6ea68e2398b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8ZnV0dXJpc3RpYyUyMGxhbmRzY2FwZXxlbnwwfHx8fDE3NjMxMTAyMzV8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "futuristic landscape"
+    },
+    {
+      "id": "nft-4",
+      "description": "3D render of a floating crystal NFT.",
+      "imageUrl": "https://images.unsplash.com/photo-1639091144445-7ef2fa9db70e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHwzZCUyMGNyeXN0YWx8ZW58MHx8fHwxNzYzMjAzMDg3fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "3d crystal"
+    },
+    {
+      "id": "nft-5",
+      "description": "Vibrant abstract painting NFT.",
+      "imageUrl": "https://images.unsplash.com/photo-1525260999773-f79a5f3e02eb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHx2aWJyYW50JTIwcGFpbnRpbmd8ZW58MHx8fHwxNzYzMjAzMDg4fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "vibrant painting"
+    },
+    {
+      "id": "nft-6",
+      "description": "Cute cartoon monster NFT.",
+      "imageUrl": "https://images.unsplash.com/photo-1588411404261-6052062cb881?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxjYXJ0b29uJTIwbW9uc3RlcnxlbnwwfHx8fDE3NjMyMDMwODh8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "cartoon monster"
+    }
+  ]
+}
